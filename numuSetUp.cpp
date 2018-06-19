@@ -48,6 +48,6 @@ void numuSetUp(){
 		binMean = (y+y2)/2;
 		crossSecHist[i] = binMean;
 		//cout << "the mean for bin "<< i << " is " << binMean << endl;
-
+	}
 return;
 }
