@@ -6,7 +6,7 @@
 void numuDissapearance(){
 	
 	TCanvas *c1 = new TCanvas("c1", "Event Rates", 1200, 600);
-	c1 -> Divide(3, 1, 0.01, 0.01, 0);// divide(number of pads in the x direction, number of pads in the y direction, x-margin, y-margin, color)
+	c1 -> Divide(2, 1, 0.01, 0.01, 0);// divide(number of pads in the x direction, number of pads in the y direction, x-margin, y-margin, color)
 
 	//create arrays to hold values for flux and cross section, fill them with the appropriate info
 	double flux[200];
@@ -21,8 +21,8 @@ void numuDissapearance(){
 	for(int j=0; j<200; j++){
 		eventRateHist -> SetBinContent(j, eventRate[j]);
 	}
-	c1 -> cd(1);
-	eventRateHist ->Draw();
+	//c1 -> cd(1);
+	//eventRateHist ->Draw();
 
 	TH1 *eventRateICARUS = new TH1D("eventRateICARUS", "Predicted Event Rate at 600m (no oscillations); Neutrino Energy (GeV); Event Rate", 200, 0.0, 10.1);
 	double scale = (470.0*470)/(600.0*600);
@@ -31,18 +31,18 @@ void numuDissapearance(){
 		binRate = scale*eventRate[j];
 		eventRateICARUS -> SetBinContent(j, binRate);
 	}
-	c1 -> cd(2);
+	c1 -> cd(1);//cd(2);
 	eventRateICARUS -> Draw();
 
 	TH1 *oscRateICARUS = new TH1D("oscRateICARUS", "Predicted Event Rate at 600m (with oscillations); Neutrino Energy (GeV); Event Rate", 200, 0.0, 10.1);
-	calculateOscillation(1.0, 1.0, 600.0, eventRateICARUS, oscRateICARUS);
-	c1 -> cd(3);
+	calculateOscillation(1.0, .010, 0.600, eventRateICARUS, oscRateICARUS);
+	c1 -> cd(2);//cd(3);
 	oscRateICARUS -> Draw();
 
 	double chiSquared = calculateChiSquared(eventRateICARUS, oscRateICARUS);
 }
 
-void calculateOscillation(double dMS, double ss2Th, double oscLength, TH1 *eventRate, TH1 *result){//calculate oscillation probability for a given (delta M squared, sin^2(2Theta)) pair, given a particular event rate
+void calculateOscillation(double dMS, double ss2Th, double oscLength, TH1 *eventRate, TH1 *result){//calculate oscillation probability for a given (delta M squared, sin^2(2Theta)) pair, at L, given a particular event rate
 	//General formula for P(E) numu -> numu: 1 - sin^2(2*theta) * sin^2(1.27(delta m^s)(L/E))
 	int nBins = eventRate -> GetNbinsX();
 	double binWidth = 0.05; // bin width in Gev = 50 MeV
@@ -56,7 +56,6 @@ void calculateOscillation(double dMS, double ss2Th, double oscLength, TH1 *event
 		arg = sin(1.27*dMS*oscLength/binEnergy);
 		binProb = 1 - ss2Th*pow(arg, 2);
 		er = eventRate -> GetBinContent(i);
-
 		result -> SetBinContent(i, er*binProb);
 	}
 
@@ -68,11 +67,14 @@ double calculateChiSquared(TH1 *noOsc, TH1 *osc){
 
 	for(int i=0; i<nBins; i++){
 		double nNull = noOsc -> GetBinContent(i);
+		if (nNull == 0){}
+		else{
 		double nOsc = osc -> GetBinContent(i);
-
 		chiSquared += (pow((nNull - nOsc), 2)/nNull);
+		}
+	
 	}
-	cout << chiSquared << endl;
+	cout << "chiSquared is " << chiSquared << endl;
 	return chiSquared;
 
 }
