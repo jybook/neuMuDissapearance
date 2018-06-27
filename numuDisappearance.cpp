@@ -1,10 +1,11 @@
+
 #include <stdio.h> 
 #include <math.h>
 
 //in this script, it's assumed that the flux file has 200 bins with widths of 50 MeV each
 int nBins = 200;
 
-void numuDisappearance(int xbins, int ybins, double xmax, double ymax){
+void numuDisapearance(int xbins, int ybins, double xmax, double ymax){
 
 	if(xmax > 1) {xmax = 1;}
 
@@ -12,13 +13,18 @@ void numuDisappearance(int xbins, int ybins, double xmax, double ymax){
 	double crossSection[200];
 	numuSetUp(crossSection, flux);
 
+	TH1 *eventRateSBND = new TH1D("eventRateSBND", "Predicted Event Rate at 100m (no oscillations); Neutrino Energy (Gev); Event Rate", 200, 0.0, 10.1);
+	double distanceSBND = 110.0;
+	calculateEventRate(eventRateSBND, flux, crossSection, distanceSBND);
+
 	TH1 *eventRateICARUS = new TH1D("eventRateICARUS", "Predicted Event Rate at 600m (no oscillations); Neutrino Energy (GeV); Event Rate", 200, 0.0, 10.01);
-	double distance = 600.0;
-	calculateEventRate(eventRateICARUS, flux, crossSection, distance);
+	double distanceICARUS = 600.0;
+	calculateEventRate(eventRateICARUS, flux, crossSection, distanceICARUS);
 
 	TH1 *oscRateICARUS = new TH1D("oscRateICARUS", "Predicted Event Rate at 600m (with oscillations); Neutrino Energy (GeV); Event Rate", 200, 0.0, 10.01);
 	TH2 *chiSquaredPlot = new TH2D("chiSquaredPlot", "Dissapearance Chi-squareds in ICARUS; Sin^2(2 Theta); Delta m^2", xbins, 0.0, xmax, ybins, 0.0, ymax);
-	
+	TH2 *contours = new TH2D("contours", "90%, 3 sigma, and 5 sigma Confidence Levels; Sin^2(2 Theta); Delta m^2", xbins, 0.0, xmax, ybins, 0.0, ymax);
+
 	double xres = xmax/xbins;
 	double yres = ymax/ybins;
 
@@ -26,61 +32,41 @@ void numuDisappearance(int xbins, int ybins, double xmax, double ymax){
 	double dMSquared;
 	double chiSquared;
 
-	double x[20000];
-	double y[20000];
-	for(int i = 0; i<20000; i++){
-		x[i] = 0;
-		y[i] = 0;
-	}
-
-	int n = 0;
-
 	for(int i=0; i<xbins; i++){
 		for (int j=0; j<ybins; j++){
 			ss2t = xres*i;
 			dMSquared = yres*j;
 			calculateOscillation(dMSquared, ss2t, 0.600, eventRateICARUS, oscRateICARUS);
-			chiSquared = calculateChiSquared(eventRateICARUS, oscRateICARUS);
+			chiSquared = calculateChiSquared(eventRateICARUS, oscRateICARUS, eventRateSBND);
 			chiSquaredPlot -> SetBinContent(i, j, chiSquared);
 			
-			
-			if(chiSquared <= 2.0 && chiSquared >= 1.0){
-				x[n] = ss2t;
-				y[n] = dMSquared;
-				//cout << "point "<< n <<" set: (" << x[n] << ", " << y[n] << "): ss2t: "<< ss2t << " dms: " << dMSquared << endl;
-				n++;
+			if(chiSquared <= 1.7 && chiSquared >= 1.6){
+				contours -> SetBinContent(i, j, 10);
 			} 
 			else { 
-				if(chiSquared <= 8.0 && chiSquared >= 6.6){
-					x[n] = ss2t;
-					y[n] = dMSquared;
-					n++; 
-					else {
-						if(chiSquared <= 30.0 && chiSquared >= 20.0){
-							x[n] = ss2t;
-							y[n] = dMSquared;
-							n++;
-						}
-
-					} 
+				if(chiSquared <= 7.8 && chiSquared >= 7.7){
+					contours -> SetBinContent(i, j, 100);
 				}
-
-			} 
-
+				else {	
+					if(chiSquared <= 24.0 && chiSquared >= 23.0){
+						contours -> SetBinContent(i, j, 1000);
+					} 
+				} 
+			}
 		}
 	}
 
 	TCanvas *c1 = new TCanvas("c1", "NuMu Dissapearance Sensitivities", 1200, 600);
 	c1 -> Divide(2, 1, 0.01, 0.01, 0);// divide(number of pads in the x direction, number of pads in the y direction, x-margin, y-margin, color)
 	
-	TGraph *contours = new TGraph(n, x, y);
 	c1 -> cd(2); 
-	c1_2 -> SetLogx(); c1_2 -> SetLogy(); //c1_2 -> SetLogz();
-	contours -> Draw("ap");
+	c1_2 -> SetLogx(); c1_2 -> SetLogy(); c1_2 -> SetLogz();
 	
-	
+	contours -> Draw("COLZ");
+
 	c1 -> cd(1); 
 	c1_1 -> SetLogx(); c1_1 -> SetLogy(); c1_1 -> SetLogz();
+	
 	chiSquaredPlot -> Draw("COLZ");
 
 }
@@ -105,11 +91,12 @@ void calculateOscillation(double dMS, double ss2Th, double oscLength, TH1 *event
 
 }
 
-double calculateChiSquared(TH1 *noOsc, TH1 *osc){
+double calculateChiSquared(TH1 *noOsc, TH1 *osc, TH1 *sbnd){
 	double chiSquared = 0.0;
 	double nOsc = 0.0;
 	double nNull = 0.0;
 	double increment = 0.0;
+	double nSBND = 0; 
 
 	for(int i=0; i<nBins; i++){
 		nNull = noOsc -> GetBinContent(i);
@@ -118,7 +105,10 @@ double calculateChiSquared(TH1 *noOsc, TH1 *osc){
 		}
 		else{
 		nOsc = osc -> GetBinContent(i);
-		increment = (pow((nNull - nOsc), 2)/nNull);
+		increment = (pow((nNull - nOsc), 2)/nNull); //Increment for the idealized model
+		//increment = pow((nNull - nOsc), 2)/(nNull + 0.09*nNull*nNull); //Increment for the single detector model
+		nSBND = sbnd -> GetBinContent(i);
+		//increment = pow((nNull - nOsc), 2)/(nNull + (pow((nNull/nSBND), 2))*nSBND);
 		chiSquared += increment;
 		}
 	
