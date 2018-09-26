@@ -78,19 +78,31 @@ protected:
   int phID1;
   int phID2;
   int phID3;
-  
+  int phID4;
+
   /** Custom data branches */
   int fNuCount;  //!< Number of neutrino interactions in the event
   int fMyVar;  //!< Another variable of interest
-
+  int fInteractionType;
+  int fMode;
+  int fDaughter;
+  int fNumDaughters;
   /** Histograms */
   TH2D* fNuVertexXZHist;  //!< Neutrino vertex XZ projection
   TH1D *fPHadron1;
   TH1D *fPHadron2;
   TH1D *fPHadron3;
   TH1D *fPHadron4;
+  TH2D *fDaughterAndVertex;
+  TH2D *fModeAndVertex;
 
-  /* Stacked Histogram */
+  TLine *top;
+  TLine *bottom;
+  TLine *left;
+  TLine *right;
+  TCanvas *fCanvas;
+
+ /* Stacked Histogram */
   THStack *fPHStack;
   TLegend *fLegend;
   TCanvas *fStackCanvas;
@@ -101,5 +113,4 @@ protected:
 
 #endif  // __sbnanalysis_ana_ExampleAnalysis_ExampleSelection__
 
-                                                                                                                                                                                                                                                                                                           104,0-1       Bot
-                                                                                                                                                                                                                                                                                                        1,1           Top
+                                                                                                                                                                            87,3          58%
